@@ -146,6 +146,17 @@ bool Android_Vulkan_CreateSurface(SDL_VideoDevice *_this,
                             " extension is not enabled in the Vulkan instance.");
     }
 
+    if (!windowData->native_window) {
+        // The ANativeWindow can be transiently NULL between onNativeSurfaceDestroyed()
+        // and the next onNativeSurfaceCreated()/onNativeSurfaceChanged() (e.g. while the
+        // app is being backgrounded/foregrounded and the Activity's Surface is being torn
+        // down and recreated on the Java UI thread). Passing a NULL window down to
+        // vkCreateAndroidSurfaceKHR is invalid usage per the Vulkan spec and crashes inside
+        // the platform driver instead of failing gracefully, so bail out here and let the
+        // caller retry once the window is valid again.
+        return SDL_SetError("Android native window is not currently available (surface not ready)");
+    }
+
     SDL_zero(createInfo);
     createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
