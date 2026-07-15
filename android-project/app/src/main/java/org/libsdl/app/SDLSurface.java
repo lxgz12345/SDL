@@ -45,6 +45,9 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
     // Is SurfaceView ready for rendering
     protected boolean mIsSurfaceReady;
 
+    // Is on-screen keyboard visible
+    protected boolean mKeyboardVisible;
+
     // Pinch events
     private final ScaleGestureDetector scaleGestureDetector;
 
@@ -210,9 +213,15 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
             SDLActivity.onNativeInsetsChanged(combined.left, combined.right, combined.top, combined.bottom);
 
             if (insets.isVisible(WindowInsets.Type.ime())) {
-                SDLActivity.onNativeScreenKeyboardShown();
+                if (!mKeyboardVisible) {
+                    mKeyboardVisible = true;
+                    SDLActivity.onNativeScreenKeyboardShown();
+                }
             } else {
-                SDLActivity.onNativeScreenKeyboardHidden();
+                if (mKeyboardVisible) {
+                    mKeyboardVisible = false;
+                    SDLActivity.onNativeScreenKeyboardHidden();
+                }
             }
         }
 
@@ -319,11 +328,11 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
     protected void enableSensor(int sensortype, boolean enabled) {
         // TODO: This uses getDefaultSensor - what if we have >1 accels?
         if (enabled) {
-            mSensorManager.registerListener(this,
+            SDLSensorManager.registerListener(mSensorManager, this,
                             mSensorManager.getDefaultSensor(sensortype),
-                            SensorManager.SENSOR_DELAY_GAME, null);
+                            SensorManager.SENSOR_DELAY_GAME);
         } else {
-            mSensorManager.unregisterListener(this,
+            SDLSensorManager.unregisterListener(mSensorManager, this,
                             mSensorManager.getDefaultSensor(sensortype));
         }
     }
@@ -370,12 +379,6 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
                 SDLActivity.mCurrentRotation = newRotation;
                 SDLActivity.onNativeRotationChanged(newRotation);
             }
-
-            SDLActivity.onNativeAccel(-x / SensorManager.GRAVITY_EARTH,
-                                      y / SensorManager.GRAVITY_EARTH,
-                                      event.values[2] / SensorManager.GRAVITY_EARTH);
-
-
         }
     }
 
@@ -437,13 +440,21 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
     @Override
     public boolean onScale(ScaleGestureDetector detector) {
         float scale = detector.getScaleFactor();
-        SDLActivity.onNativePinchUpdate(scale);
+        float span_x = getNormalizedX(detector.getCurrentSpanX());
+        float span_y = getNormalizedY(detector.getCurrentSpanY());
+        float focus_x = getNormalizedX(detector.getFocusX());
+        float focus_y = getNormalizedY(detector.getFocusY());
+        SDLActivity.onNativePinchUpdate(scale, span_x, span_y, focus_x, focus_y);
         return true;
     }
 
     @Override
     public boolean onScaleBegin(ScaleGestureDetector detector) {
-        SDLActivity.onNativePinchStart();
+        float span_x = getNormalizedX(detector.getCurrentSpanX());
+        float span_y = getNormalizedY(detector.getCurrentSpanY());
+        float focus_x = getNormalizedX(detector.getFocusX());
+        float focus_y = getNormalizedY(detector.getFocusY());
+        SDLActivity.onNativePinchStart(span_x, span_y, focus_x, focus_y);
         return true;
     }
 

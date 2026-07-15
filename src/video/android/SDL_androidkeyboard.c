@@ -361,7 +361,11 @@ static SDL_Scancode TranslateKeycode(int keycode)
         scancode = Android_Keycodes[keycode];
     }
     if (scancode == SDL_SCANCODE_UNKNOWN) {
-        __android_log_print(ANDROID_LOG_INFO, "SDL", "Unknown keycode %d", keycode);
+        if (keycode >= 96 /* AKEYCODE_BUTTON_A */ && keycode < 111 /* AKEYCODE_ESCAPE */) {
+            // Ignore game controller buttons
+        } else {
+            __android_log_print(ANDROID_LOG_INFO, "SDL", "Unknown keycode %d", keycode);
+        }
     }
     return scancode;
 }
@@ -451,7 +455,7 @@ void Android_HideScreenKeyboard(SDL_VideoDevice *_this, SDL_Window *window)
 
 void Android_RestoreScreenKeyboard(SDL_VideoDevice *_this, SDL_Window *window)
 {
-    if (_this->screen_keyboard_shown) {
+    if (_this && _this->screen_keyboard_shown && window) {
         Android_ShowScreenKeyboard(_this, window, window->text_input_props);
     }
 }
